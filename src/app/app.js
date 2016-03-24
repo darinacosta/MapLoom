@@ -11,6 +11,8 @@
     'xeditable'
   ]);
 
+  var onErrorCallback;
+
   module.run(function run(editableOptions) {
     editableOptions.theme = 'bs3';
   });
