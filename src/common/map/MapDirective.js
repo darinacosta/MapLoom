@@ -20,10 +20,7 @@
               map = new ol.Map({
                 layers: [
                   new ol.layer.Tile({
-                    source: new ol.source.TileJSON({
-                      url: 'http://api.tiles.mapbox.com/v4/mapbox.world-light.json?access_token=pk.eyJ1IjoiYmVja2VyciIsImEiOiJjaWtzcHVyeTYwMDA3dWdsenB5aHUxMzl1In0.1FVjOTdhoXGXtnfApX8wVQ',
-                      crossOrigin: true
-                    })
+                    source: new ol.source.OSM()
                   })
                 ],
                 target: scope.mapId,

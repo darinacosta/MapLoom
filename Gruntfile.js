@@ -18,8 +18,6 @@ module.exports = function ( grunt ) {
   grunt.loadNpmTasks('grunt-ngmin');
   grunt.loadNpmTasks('grunt-html2js');
   grunt.loadNpmTasks('grunt-gjslint');
-  grunt.loadNpmTasks('grunt-contrib-connect');
-  grunt.loadNpmTasks('grunt-gh-pages');
 
   /**
    * Load in our build configuration file.
@@ -36,35 +34,6 @@ module.exports = function ( grunt ) {
      * version. It's already there, so we don't repeat ourselves here.
      */
     pkg: grunt.file.readJSON("package.json"),
-
-    connect: {
-      server: {
-        options: {
-          port: 9001,
-          base: 'build'
-        }
-      }
-    },
-
-    'gh-pages': {
-      options: {
-        base: 'build',
-        only: ['**/**', '!CNAME']
-      },
-      src: ['**'],
-      deploy: {
-        options: {
-          user: {
-            name: 'Mila Frerichs',
-            email: 'mila.frerichs@gmail.com'
-          },
-          repo: 'https://' + process.env.GH_TOKEN + '@github.com/terranodo/maploom.git',
-          message: 'publish gh-pages (auto)' + getDeployMessage(),
-          silent: true
-        },
-        src: ['**/*']
-      }
-    },
 
     /**
      * The banner is the comment that is placed at the top of our compiled
@@ -763,26 +732,6 @@ module.exports = function ( grunt ) {
     ret += 'build number: ' + process.env.TRAVIS_BUILD_NUMBER + '\n';
     return ret;
   }
-
-  grunt.registerTask('check-deploy', function() {
-    // need this
-    this.requires(['build']);
-
-    // only deploy under these conditions
-    if (process.env.TRAVIS === 'true' && process.env.TRAVIS_SECURE_ENV_VARS === 'true' && process.env.TRAVIS_PULL_REQUEST === 'false' && process.env.TRAVIS_BRANCH == process.env.DEPLOY_BRANCH) {
-      grunt.log.writeln('executing deployment');
-      // queue deploy
-      grunt.task.run('gh-pages:deploy');
-    }
-    else {
-      grunt.log.writeln('skipped deployment');
-    }
-  });
-
-  grunt.registerTask('deploy', 'Publish from Travis', [
-    'build',
-    'check-deploy'
-  ]);
 
 
 };

@@ -372,7 +372,6 @@
 
     this.zoomToLayerExtent = function(layer) {
       var metadata = layer.get('metadata');
-
       var shrinkExtent = function(extent, shrink) {
         var newExtent = extent;
 
@@ -603,10 +602,15 @@
               name: minimalConfig.name,
               url: goog.isDefAndNotNull(mostSpecificUrl) ? mostSpecificUrl : undefined,
               title: fullConfig.Title,
+              extent: fullConfig['extent'],
               abstract: fullConfig.Abstract,
               readOnly: false,
               editable: false,
-              projection: service_.getCRSCode(fullConfig.CRS)
+              projection: service_.getCRSCode(fullConfig.CRS),
+              bbox: {
+                extent: fullConfig['extent'],
+                crs: service_.getCRSCode(fullConfig.CRS)
+              }
             },
             visible: true,
             source: new ol.source.XYZ({

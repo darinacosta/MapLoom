@@ -508,6 +508,7 @@ var SERVER_SERVICE_USE_PROXY = true;
       return {
         add: true,
         Abstract: layerInfo.abstract,
+        extent: layerInfo.extent,
         Name: layerInfo.typename,
         Title: layerInfo.title,
         CRS: layerInfo.srid,
@@ -530,8 +531,8 @@ var SERVER_SERVICE_USE_PROXY = true;
         LayerDate: layerInfo.LayerDate,
         LayerCategory: layerInfo.LayerCategory,
         CRS: ['EPSG:4326'],
-        detail_url: 'http://52.38.116.143/layer/' + layerInfo.LayerId,
-        thumbnail_url: layerInfo.ThumbnailURL ? ('http://52.38.116.143' + layerInfo.ThumbnailURL) : null,
+        detail_url: configService_.configuration.registryUrl + '/layer/' + layerInfo.LayerId,
+        thumbnail_url: layerInfo.ThumbnailURL ? (configService_.configuration.registryUrl + layerInfo.ThumbnailURL) : null,
         author: author(layerInfo),
         domain: domain(layerInfo),
         type: 'mapproxy_tms',
@@ -592,7 +593,8 @@ var SERVER_SERVICE_USE_PROXY = true;
       server.layersConfig = [];
       server.populatingLayersConfig = true;
       var config = createAuthorizationConfigForServer(server);
-
+      console.log(config);
+      console.log(searchUrl);
       http_.post(searchUrl, body, config).then(function(xhr) {
         if (xhr.status === 200) {
           server.layersConfig = layerConfigCallback(xhr.data, serverGeoserversearchUrl(searchUrl));
@@ -615,6 +617,7 @@ var SERVER_SERVICE_USE_PROXY = true;
       if (elasticResponse.aggregations) {
         rootScope_.$broadcast('dateRangeHistogram', elasticResponse.aggregations.range);
       }
+      console.log(createHyperSearchLayerObjects(elasticResponse.hits.hits, serverUrl));
       return createHyperSearchLayerObjects(elasticResponse.hits.hits, serverUrl);
     };
 
@@ -744,6 +747,58 @@ var SERVER_SERVICE_USE_PROXY = true;
         searchUrl = service_.applyESFilter(searchUrl, filterOptions);
       }
       return addSearchResults(searchUrl, {}, server, service_.reformatLayerConfigs);
+    };
+
+    this.populateLayersConfigInelastic = function(server, deferredResponse) {
+      // prevent getCapabilities request until ran by the user.
+      if (server.lazy !== true || force === true || server.mapLayerRequiresServer === true) {
+        var parser = new ol.format.WMSCapabilities();
+        var url = server.url;
+
+        // If this is a virtual service, use the virtual service url for getCapabilties
+        if (server.isVirtualService === true) {
+          url = server.virtualServiceUrl;
+        }
+
+        var iqm = url.indexOf('?');
+        var url_getcaps = url + (iqm >= 0 ? (iqm - 1 == url.length ? '' : '&') : '?') + 'SERVICE=WMS&REQUEST=GetCapabilities';
+
+        server.populatingLayersConfig = true;
+        var config = {};
+        config.headers = {};
+        if (goog.isDefAndNotNull(server.authentication)) {
+          config.headers['Authorization'] = 'Basic ' + server.authentication;
+        } else {
+          config.headers['Authorization'] = '';
+        }
+        // server hasn't been added yet, so specify the auth headers here
+        http_.get(url_getcaps, config).then(function(xhr) {
+          if (xhr.status === 200) {
+            var response = parser.read(xhr.data);
+            if (goog.isDefAndNotNull(response.Capability) &&
+                goog.isDefAndNotNull(response.Capability.Layer)) {
+              server.layersConfig = response.Capability.Layer.Layer;
+              console.log('---- populateLayersConfig.populateLayersConfig server', server);
+              rootScope_.$broadcast('layers-loaded', server.id);
+              deferredResponse.resolve(server);
+            } else {
+              deferredResponse.resolve(server);
+            }
+            server.populatingLayersConfig = false;
+          } else {
+            deferredResponse.resolve(server);
+            server.populatingLayersConfig = false;
+          }
+        }, function(xhr) {
+          deferredResponse.resolve(server);
+          server.populatingLayersConfig = false;
+        });
+      } else {
+        deferredResponse.resolve(server);
+        server.populatingLayersConfig = false;
+      }
+
+      return deferredResponse;
     };
 
     this.addSearchResultsForHyper = function(server, filterOptions, catalogKey) {
@@ -936,10 +991,11 @@ var SERVER_SERVICE_USE_PROXY = true;
           if (!goog.isDefAndNotNull(server.url)) {
             dialogService_.error(translate_.instant('error'), translate_.instant('server_url_not_specified'));
             deferredResponse.reject(server);
-          } else {
+          } else if (server.url.indexOf('/web/') > -1) {
             service_.populateLayersConfigElastic(server, null);
             deferredResponse.resolve(server);
-
+          } else {
+            deferredResponse = service_.populateLayersConfigInelastic(server, deferredResponse);
           }
         } else {
           deferredResponse.reject();

@@ -120,7 +120,7 @@
           </div>
 
           <div class="panel" ng-show="layersPanel">
-            <div class="panel-heading" data-parent="#pulldown-content">
+            <div ng-show="registryEnabled" class="panel-heading" data-parent="#pulldown-content">
               <span translate="registry">Registry</span>
               <div ng-show="addLayers" stop-event='click' ng-controller="modalToggle" ng-click="toggleModal('#registry-layer-dialog')"
                    tooltip-placement="top" tooltip="{{'registry_layer_btn' | translate}}" tooltip-append-to-body="true"
